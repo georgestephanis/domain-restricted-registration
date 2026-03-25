@@ -58,6 +58,9 @@ add_action( 'after_password_reset', 'drr_activate_account', 10, 2 );
 // JS — show/hide toggle and domain validation. Only outputs on the General Settings screen.
 add_action( 'admin_footer-options-general.php', 'drr_admin_scripts' );
 
+// Handle the "Enable registration" quick-action link from the inline warning.
+add_action( 'admin_post_drr_enable_registration', 'drr_handle_enable_registration' );
+
 // ---------------------------------------------------------------------------
 // Section 1: Settings registration
 // ---------------------------------------------------------------------------
@@ -121,7 +124,7 @@ function drr_sanitize_domain( $value ): string {
 function drr_add_settings_field(): void {
 	add_settings_field(
 		'drr_allowed_domain_field',
-		__( 'Allowed Registration Domain', 'domain-restricted-registration' ),
+		__( 'Limit Registration Domain', 'domain-restricted-registration' ),
 		'drr_render_domain_field',
 		'general',
 		'default'
@@ -145,8 +148,24 @@ function drr_render_domain_field(): void {
 		/>
 		<span id="drr-domain-notice" style="margin-left:8px;display:none;" aria-live="polite"></span>
 		<p class="description">
-			<?php esc_html_e( 'If set, only email addresses from this domain may register and new accounts must confirm their email before logging in. Leave empty to allow all domains.', 'domain-restricted-registration' ); ?>
+			<?php esc_html_e( 'If set, only email addresses from this domain may register and new accounts must confirm their email before logging in. Leave empty to allow all domains. Requires "Anyone can register" to be enabled above.', 'domain-restricted-registration' ); ?>
 		</p>
+		<div id="drr-registration-warning" class="notice notice-warning inline" style="display:none;" aria-live="polite">
+			<p>
+			<?php
+			$allowed_tags = array(
+				'strong' => array(),
+				'a'      => array( 'href' => array() ),
+			);
+			/* translators: %s: "Enable registration" link URL */
+			$warning_template = __( '<strong>Warning:</strong> "Anyone can register" is currently disabled, so this domain restriction has no effect. <a href="%s">Enable registration</a>.', 'domain-restricted-registration' );
+			printf(
+				wp_kses( $warning_template, $allowed_tags ),
+				esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=drr_enable_registration' ), 'drr_enable_registration' ) )
+			);
+			?>
+			</p>
+		</div>
 	</div>
 	<?php
 }
@@ -158,7 +177,11 @@ function drr_render_domain_field(): void {
 /**
  * Outputs inline scripts for the General Settings page.
  *
- * Toggle: hides the domain field when "Anyone can register" is unchecked.
+ * Relocation: moves the domain field row into the DOM immediately after the
+ * "New User Default Role" row so it sits visually inside the Membership block.
+ * (Settings API fields render at the bottom of the page via
+ * do_settings_fields('general','default') at options-general.php:571, far from
+ * the hardcoded Membership section rows.)
  *
  * DNS validation: on focusout of the domain input, queries the Google
  * DNS-over-HTTPS JSON API to confirm the domain exists. Displays a notice
@@ -171,19 +194,30 @@ function drr_admin_scripts(): void {
 	<script>
 	( function () {
 
-		/* ── Show/hide toggle ── */
-		var checkbox = document.getElementById( 'users_can_register' );
+		/* ── Relocate the row next to the Membership section ── */
 		var wrapper  = document.getElementById( 'drr-domain-wrapper' );
+		var anchor   = document.getElementById( 'default_role' ); // "New User Default Role" select.
 
-		if ( checkbox && wrapper ) {
-			var tr = wrapper.closest( 'tr' );
-			if ( tr ) {
-				function toggleRow() {
-					tr.style.display = checkbox.checked ? '' : 'none';
-				}
-				toggleRow();
-				checkbox.addEventListener( 'change', toggleRow );
+		if ( wrapper && anchor ) {
+			var ourRow    = wrapper.closest( 'tr' );
+			var anchorRow = anchor.closest( 'tr' );
+			if ( ourRow && anchorRow && anchorRow.parentNode ) {
+				anchorRow.insertAdjacentElement( 'afterend', ourRow );
 			}
+		}
+
+		/* ── Inline misconfiguration warning ── */
+		var regCheckbox = document.getElementById( 'users_can_register' );
+		var warning     = document.getElementById( 'drr-registration-warning' );
+
+		if ( regCheckbox && warning ) {
+			function updateWarning() {
+				var hasDomain = input && '' !== input.value.trim();
+				warning.style.display = ( hasDomain && ! regCheckbox.checked ) ? '' : 'none';
+			}
+
+			regCheckbox.addEventListener( 'change', updateWarning );
+			updateWarning(); // Reflect current state on page load.
 		}
 
 		/* ── DNS-over-HTTPS domain validation ── */
@@ -192,6 +226,11 @@ function drr_admin_scripts(): void {
 
 		if ( ! input || ! notice ) {
 			return;
+		}
+
+		// Also re-evaluate the warning whenever the domain value changes.
+		if ( warning ) {
+			input.addEventListener( 'input', updateWarning );
 		}
 
 		var lastChecked = '';
@@ -466,4 +505,27 @@ function drr_activate_account( WP_User $user, string $new_pass ): void {
 
 	// Clean up the "default password nag" core sets on registration.
 	delete_user_meta( $user->ID, 'default_password_nag' );
+}
+
+// ---------------------------------------------------------------------------
+// Section 8: Enable-registration action handler
+// ---------------------------------------------------------------------------
+
+/**
+ * Handles the "Enable registration" action link from the inline warning.
+ *
+ * Verifies the nonce and capability, sets users_can_register to 1, then
+ * redirects back to Settings > General.
+ */
+function drr_handle_enable_registration(): void {
+	check_admin_referer( 'drr_enable_registration' );
+
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_die( esc_html__( 'Sorry, you are not allowed to do that.', 'domain-restricted-registration' ) );
+	}
+
+	update_option( 'users_can_register', 1 );
+
+	wp_safe_redirect( admin_url( 'options-general.php' ) );
+	exit;
 }
