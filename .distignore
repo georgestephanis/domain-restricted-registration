@@ -1,0 +1,11 @@
+.distignore
+.git
+.gitignore
+.phpcs.xml.dist
+CLAUDE.md
+composer.json
+composer.lock
+node_modules
+package.json
+package-lock.json
+vendor

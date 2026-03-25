@@ -1,0 +1,13 @@
+{
+	"$schema": "https://json.schemastore.org/package.json",
+	"name": "domain-restricted-registration",
+	"version": "2.0.0",
+	"description": "Restricts WordPress user registration to a single email domain with email confirmation.",
+	"license": "GPL-2.0-or-later",
+	"scripts": {
+		"plugin-zip": "wp-scripts plugin-zip"
+	},
+	"devDependencies": {
+		"@wordpress/scripts": "^30.0.0"
+	}
+}
