@@ -16,7 +16,7 @@
       "pluginZipFile": {
         "resource": "git:directory",
         "url": "https://github.com/georgestephanis/domain-restricted-registration",
-        "ref": "trunk",
+        "ref": "main",
         "path": "/"
       },
       "options": {
