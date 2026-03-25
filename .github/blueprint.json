@@ -8,19 +8,19 @@
   "steps": [
     {
       "step": "login",
-      "username": "admin",
-      "password": "password"
+      "username": "admin"
     },
     {
       "step": "installPlugin",
-      "pluginZipFile": {
+      "pluginData": {
         "resource": "git:directory",
         "url": "https://github.com/georgestephanis/domain-restricted-registration",
         "ref": "main",
-        "path": "/"
+        "refType": "branch"
       },
       "options": {
-        "activate": true
+        "activate": true,
+        "targetFolderName": "domain-restricted-registration"
       }
     }
   ]
