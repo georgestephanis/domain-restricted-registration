@@ -18,6 +18,7 @@
 	"scripts": {
 		"lint": "phpcs",
 		"lint:php": "@lint",
-		"lint-fix": "phpcbf"
+		"lint-fix": "phpcbf",
+		"make-pot": "wp i18n make-pot . languages/domain-restricted-registration.pot --domain=domain-restricted-registration --exclude=vendor,node_modules"
 	}
 }
