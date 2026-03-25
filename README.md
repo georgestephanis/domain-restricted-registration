@@ -1,5 +1,7 @@
 # Domain-Restricted Registration
 
+[![Try in WordPress Playground](https://img.shields.io/badge/Try%20in-WordPress%20Playground-3858e9?logo=wordpress)](https://playground.wordpress.net/#{"blueprint-url":"https://raw.githubusercontent.com/georgestephanis/domain-restricted-registration/trunk/.github/blueprint.json"})
+
 A WordPress plugin that restricts user registration to a single email domain and requires new accounts to confirm their email address before they can log in.
 
 ## Features
